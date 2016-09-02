@@ -1,4 +1,4 @@
-package com.randomlychosenbytes.caloriescount.data;
+package com.randomlychosenbytes.openfoodfactsdumper;
 
 import java.util.Comparator;
 
@@ -22,5 +22,11 @@ public class Portion
         public int compare(Portion p1, Portion p2) {
             return p1.weight > p2.weight ? 1 : -1;
         }
+    }
+    
+    @Override
+    public String toString()
+    {
+        return "\"" + name + "\"" + ":\"" + weight + "\"";
     }
 }

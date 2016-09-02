@@ -1,8 +1,10 @@
 package com.randomlychosenbytes.openfoodfactsdumper;
 
-import com.randomlychosenbytes.caloriescount.data.Portion;
+import com.randomlychosenbytes.openfoodfactsdumper.Portion;
 import com.randomlychosenbytes.openfoodfactsdumper.Utils;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Food
@@ -22,7 +24,13 @@ public class Food {
     private float protein;
     private boolean isBeverage;
 
+    private Set<Portion> portions;
+
     public Food() {
+        name = "";
+        brands = "";
+        categories = "";
+        portions = new HashSet<>();
     }
 
     public Food(String name, String brand, String categories,
@@ -64,9 +72,22 @@ public class Food {
         String carbohydrate = String.valueOf(this.carbohydrate).replace(",", ".");
         String protein = String.valueOf(this.protein).replace(",", ".");
 
+        String portionsStr = portions.toString();
+        portionsStr = portionsStr.replace("[", "{");
+        portionsStr = portionsStr.replace("]", "}");
+       
+        
         // add portions
         return name + "|" + getBrands() + "|" + getCategories() + "|" + weight + "|" + calories + "|"
-                + fat + "|" + carbohydrate + "|" + protein + "|" + isBeverage;
+                + fat + "|" + carbohydrate + "|" + protein + "|" + isBeverage + "|" + portionsStr;
+    }
+
+    public Set<Portion> getPortions() {
+        return portions;
+    }
+
+    public void setPortions(Set<Portion> portions) {
+        this.portions = portions;
     }
 
     public String getName() {

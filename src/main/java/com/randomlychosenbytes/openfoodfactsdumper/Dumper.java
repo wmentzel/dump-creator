@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * OpenFoodFactsDumpCreator 0.1 Alpha
@@ -25,10 +27,14 @@ import java.util.logging.Logger;
  */
 public class Dumper {
 
-    private static final String[] ignoreList = new String[]{"zu://", "//Property://", "fr:", "en:"};
+    private static final String[] blackList = new String[]{"zu://", "//Property://", "fr:", "en:"};
 
     public static String FILE_EXPORT_PATH = "db_dump_germany.csv";
     public static String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
+
+    public static final int MAX_NUM_CATEGORIES = 3;
+
+    private static final Pattern p = Pattern.compile("-?\\d+");
 
     public static void main(String args[]) {
         CSVReader reader;
@@ -111,7 +117,9 @@ public class Dumper {
                 }
 
                 //System.out.println(food.toCsvLine());
-                //System.out.println("--------");
+                Set<Portion> portionSet = getPortions(nextLine[FieldNames.serving_size]);
+                food.setPortions(portionSet);
+
                 foods.add(food);
                 foodCount++;
             }
@@ -129,6 +137,26 @@ public class Dumper {
         } catch (IOException ex) {
             Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    private static Set<Portion> getPortions(String str) {
+        Set<Portion> portionsSet = new HashSet<>();
+
+        Matcher m = p.matcher(str);
+        while (m.find()) {
+            try {
+                float portionWeight = new Float(m.group());
+                if (portionWeight == 1 || portionWeight == 100 || portionWeight == 0) {
+                    break;
+                }
+                portionsSet.add(new Portion("1 Portion", portionWeight));
+            } catch (NumberFormatException e) {
+            }
+
+            break;
+        }
+
+        return portionsSet;
     }
 
     private static boolean isBeverage(String quantityStr) {
@@ -176,14 +204,12 @@ public class Dumper {
 
         for (Food food : foods) {
 
-            osw.write(food.toCsvLine() + "|{}" + "\n"); // {} is a portion json string
+            osw.write(food.toCsvLine() + "\n"); // {} is a portion json string
         }
 
         osw.flush();
         osw.close();
     }
-
-    final static int MAX_NUM_CATEGORIES = 3;
 
     private static String buildUniqueList(String ignore, String filterString) {
         String filterArray[] = filterString.split(",");
@@ -205,17 +231,17 @@ public class Dumper {
             boolean isNotOnlyWhiteSpaces = str.replaceAll(" ", "").length() != 0;
             boolean isNotEmpty = !str.isEmpty();
             boolean isLengthOk = str.length() <= 64;
-            boolean isNotOnIgnoreList = !isItemOfIgnoreListInString(str);
+            boolean isNotOnIgnoreList = !isStringContainedInListElement(str, blackList);
 
             if (isNotTheFoodName && isNotEmpty
                     && isLengthOk && isNotOnlyWhiteSpaces
                     && isNotOnIgnoreList) {
 
-                output.append(str);
-
-                if (i < MAX_NUM_CATEGORIES - 1 && i < set.size() - 1) {
+                if (i != 0) {
                     output.append(", ");
                 }
+
+                output.append(str);
             }
 
             i++;
@@ -230,8 +256,8 @@ public class Dumper {
      * @param subject
      * @return
      */
-    public static boolean isItemOfIgnoreListInString(String subject) {
-        for (String ignoreItem : ignoreList) {
+    public static boolean isStringContainedInListElement(String subject, String list[]) {
+        for (String ignoreItem : list) {
             if (subject.contains(ignoreItem)) {
                 return true;
             }
