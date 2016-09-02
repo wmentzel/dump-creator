@@ -16,11 +16,10 @@ public class Portion
         this.weight = weight;
     }
 
-    public static class PortionComparator implements Comparator<Portion>
-    {
+    public static class PortionComparator implements Comparator<Portion> {
+
         @Override
-        public int compare(Portion p1, Portion p2)
-        {
+        public int compare(Portion p1, Portion p2) {
             return p1.weight > p2.weight ? 1 : -1;
         }
     }

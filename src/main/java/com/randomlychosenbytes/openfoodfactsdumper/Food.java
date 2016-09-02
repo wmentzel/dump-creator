@@ -1,6 +1,8 @@
 package com.randomlychosenbytes.openfoodfactsdumper;
 
+import com.randomlychosenbytes.caloriescount.data.Portion;
 import com.randomlychosenbytes.openfoodfactsdumper.Utils;
+import java.util.Comparator;
 
 /**
  * Food
@@ -145,5 +147,13 @@ public class Food {
 
     public void setCategories(String categories) {
         this.categories = categories;
+    }
+
+    public static class FoodComparator implements Comparator<Food> {
+
+        @Override
+        public int compare(Food food1, Food food2) {
+            return food1.getName().compareTo(food2.getName());
+        }
     }
 }
