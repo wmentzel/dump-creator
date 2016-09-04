@@ -11,9 +11,11 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,14 +29,22 @@ import java.util.regex.Pattern;
  */
 public class Dumper {
 
-    private static final String[] blackList = new String[]{"zu://", "//Property://", "fr:", "en:"};
-
-    public static String FILE_EXPORT_PATH = "db_dump_germany.csv";
-    public static String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
-
+    public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
     public static final int MAX_NUM_CATEGORIES = 3;
+    
+    private static final String COUNTRY = "usa";
+public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
 
-    private static final Pattern p = Pattern.compile("-?\\d+");
+    private static final String[] CATEGORIES_BLACKLIST = new String[]{"zu://", "//Property://", "fr:", "en:"};
+    private static final Map<String, String[]> COUNTRY_SYNONYMS_MAP = new HashMap<>();
+
+    static {
+        COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany", "Deutschland", "en:DE"});
+        COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States", "U.S.A", "usa", "us", "en:US"});
+        COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France", "fr:FR"});
+    }
+
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+");
 
     public static void main(String args[]) {
         CSVReader reader;
@@ -65,11 +75,7 @@ public class Dumper {
                     continue;
                 }
 
-                String countries = nextLine[FieldNames.countries];
-
-                boolean countryMatches = countries.contains("Germany") || countries.contains("Deutschland") || countries.contains("en:DE");
-
-                if (!countryMatches) {
+                if (!countryMatches(COUNTRY, nextLine[FieldNames.countries])) {
                     continue;
                 }
 
@@ -107,11 +113,10 @@ public class Dumper {
 
                 try {
                     food.setCalories(new Integer(nextLine[FieldNames.energy_100g]));
-                    food.setWeight(getWeightInGrams(nextLine[FieldNames.quantity]));
+                    food.setWeight(100.0f);
                     food.setProtein(new Float(nextLine[FieldNames.proteins_100g]));
                     food.setCarbohydrate(new Float(nextLine[FieldNames.carbohydrates_100g]));
                     food.setFat(new Float(nextLine[FieldNames.fat_100g]));
-                    food.calculateFor100g();
                 } catch (NumberFormatException e) {
                     continue;
                 }
@@ -129,20 +134,29 @@ public class Dumper {
             System.out.println("Number of results: " + foodCount);
 
             Collections.sort(foods, new Food.FoodComparator());
-            writeToFile(foods);
-            long fileSizekB = (long) (new File("C:\\Users\\Willi\\Downloads\\output.csv").length() / 1000.0);
-
-            System.out.println("Dump size: " + fileSizekB + " kB");
+            System.out.println("Dump size: " + writeToFile(foods) + " kB");
 
         } catch (IOException ex) {
             Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
+    private static boolean countryMatches(String countryCode, String countryColumn) {
+        String countrySynonyms[] = COUNTRY_SYNONYMS_MAP.get(countryCode);
+
+        for (String synonym : countrySynonyms) {
+            if (countryColumn.equalsIgnoreCase(synonym)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static Set<Portion> getPortions(String str) {
         Set<Portion> portionsSet = new HashSet<>();
 
-        Matcher m = p.matcher(str);
+        Matcher m = NUMBER_PATTERN.matcher(str);
         while (m.find()) {
             try {
                 float portionWeight = new Float(m.group());
@@ -159,6 +173,13 @@ public class Dumper {
         return portionsSet;
     }
 
+    /**
+     * Searches a string for units used for fluids to determine whether the food
+     * is a beverage/fluid. If one is found true is returned, false otherwise.
+     *
+     * @param quantityStr
+     * @return
+     */
     private static boolean isBeverage(String quantityStr) {
         return quantityStr.contains("l") || quantityStr.contains("ml") || quantityStr.contains("cl");
     }
@@ -198,7 +219,7 @@ public class Dumper {
         return new Float(quantityStr) * factor;
     }
 
-    private static void writeToFile(List<Food> foods) throws FileNotFoundException, IOException {
+    private static long writeToFile(List<Food> foods) throws FileNotFoundException, IOException {
         FileOutputStream fOut = new FileOutputStream(FILE_EXPORT_PATH);
         OutputStreamWriter osw = new OutputStreamWriter(fOut, "UTF-8");
 
@@ -209,6 +230,9 @@ public class Dumper {
 
         osw.flush();
         osw.close();
+        
+        long fileSizeBytes = new File(FILE_EXPORT_PATH).length();
+        return (long) (fileSizeBytes / 1000.0);
     }
 
     private static String buildUniqueList(String ignore, String filterString) {
@@ -231,7 +255,7 @@ public class Dumper {
             boolean isNotOnlyWhiteSpaces = str.replaceAll(" ", "").length() != 0;
             boolean isNotEmpty = !str.isEmpty();
             boolean isLengthOk = str.length() <= 64;
-            boolean isNotOnIgnoreList = !isStringContainedInListElement(str, blackList);
+            boolean isNotOnIgnoreList = !isStringContainedInListElement(str, CATEGORIES_BLACKLIST);
 
             if (isNotTheFoodName && isNotEmpty
                     && isLengthOk && isNotOnlyWhiteSpaces
