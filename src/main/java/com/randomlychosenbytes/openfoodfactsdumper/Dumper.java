@@ -1,15 +1,11 @@
 package com.randomlychosenbytes.openfoodfactsdumper;
 
 import com.opencsv.CSVReader;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,16 +25,29 @@ import java.util.regex.Pattern;
  */
 public class Dumper {
 
+    public static final float KILOJOULE_TO_KCAL_FACTOR = 0.239006f;
+
+    public static final String COUNTRY = "france";
+    public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
+
+    //
+    // Constraints
+    //
     public static final int MAX_NUM_CATEGORIES = 3;
-    
-    private static final String COUNTRY = "usa";
-public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
+    public static final int MAX_LENGTH_CATEGORY_NAME = 64;
+
+    public static final int MAX_LENGTH_FOOD_NAME = 64;
+
+    public static final int MAX_LENGTH_BRAND_NAME = 64;
+    public static final int MAX_NUM_BRANDS = 3;
 
     private static final String[] CATEGORIES_BLACKLIST = new String[]{"zu://", "//Property://", "fr:", "en:"};
-    private static final Map<String, String[]> COUNTRY_SYNONYMS_MAP = new HashMap<>();
+
+    private static Map<String, String[]> COUNTRY_SYNONYMS_MAP;
 
     static {
+        COUNTRY_SYNONYMS_MAP = new HashMap<>();
         COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany", "Deutschland", "en:DE"});
         COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States", "U.S.A", "usa", "us", "en:US"});
         COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France", "fr:FR"});
@@ -100,19 +109,20 @@ public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
                     longestFoodName = foodName;
                 }
 
-                if (foodName.length() > 55) {
+                if (foodName.length() > MAX_LENGTH_FOOD_NAME) {
                     continue;
                 }
 
                 food.setName(foodName);
-                food.setBrands(buildUniqueList("", nextLine[FieldNames.brands]));
+                food.setBrands(Utils.buildUniqueList("", nextLine[FieldNames.brands], CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
 
-                String categoriees = buildUniqueList(foodName, nextLine[FieldNames.categories] + "," + nextLine[FieldNames.generic_name]);
+                String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories] + "," + nextLine[FieldNames.generic_name], CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
                 food.setCategories(categoriees);
                 food.setBeverage(isBeverage(nextLine[FieldNames.quantity]));
 
                 try {
-                    food.setCalories(new Integer(nextLine[FieldNames.energy_100g]));
+                    int kiloJoule = new Integer(nextLine[FieldNames.energy_100g]);
+                    food.setCalories(Math.round(kiloJoule * KILOJOULE_TO_KCAL_FACTOR));
                     food.setWeight(100.0f);
                     food.setProtein(new Float(nextLine[FieldNames.proteins_100g]));
                     food.setCarbohydrate(new Float(nextLine[FieldNames.carbohydrates_100g]));
@@ -134,7 +144,7 @@ public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
             System.out.println("Number of results: " + foodCount);
 
             Collections.sort(foods, new Food.FoodComparator());
-            System.out.println("Dump size: " + writeToFile(foods) + " kB");
+            System.out.println("Dump size: " + Utils.writeToFile(foods) + " kB");
 
         } catch (IOException ex) {
             Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
@@ -160,11 +170,13 @@ public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
         while (m.find()) {
             try {
                 float portionWeight = new Float(m.group());
-                if (portionWeight == 1 || portionWeight == 100 || portionWeight == 0) {
+
+                if (portionWeight == 0 || portionWeight == 1 || portionWeight == 100) {
                     break;
                 }
                 portionsSet.add(new Portion("1 Portion", portionWeight));
             } catch (NumberFormatException e) {
+                // don't add it
             }
 
             break;
@@ -219,74 +231,4 @@ public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
         return new Float(quantityStr) * factor;
     }
 
-    private static long writeToFile(List<Food> foods) throws FileNotFoundException, IOException {
-        FileOutputStream fOut = new FileOutputStream(FILE_EXPORT_PATH);
-        OutputStreamWriter osw = new OutputStreamWriter(fOut, "UTF-8");
-
-        for (Food food : foods) {
-
-            osw.write(food.toCsvLine() + "\n"); // {} is a portion json string
-        }
-
-        osw.flush();
-        osw.close();
-        
-        long fileSizeBytes = new File(FILE_EXPORT_PATH).length();
-        return (long) (fileSizeBytes / 1000.0);
-    }
-
-    private static String buildUniqueList(String ignore, String filterString) {
-        String filterArray[] = filterString.split(",");
-
-        Set<String> set = new HashSet<>();
-        set.addAll(Arrays.asList(filterArray));
-
-        StringBuilder output = new StringBuilder();
-
-        int i = 0;
-        for (String str : set) {
-
-            if (i == 3) { // three cateogies are enough
-                break;
-            }
-
-            str = str.trim();
-            boolean isNotTheFoodName = !str.equals(ignore);
-            boolean isNotOnlyWhiteSpaces = str.replaceAll(" ", "").length() != 0;
-            boolean isNotEmpty = !str.isEmpty();
-            boolean isLengthOk = str.length() <= 64;
-            boolean isNotOnIgnoreList = !isStringContainedInListElement(str, CATEGORIES_BLACKLIST);
-
-            if (isNotTheFoodName && isNotEmpty
-                    && isLengthOk && isNotOnlyWhiteSpaces
-                    && isNotOnIgnoreList) {
-
-                if (i != 0) {
-                    output.append(", ");
-                }
-
-                output.append(str);
-            }
-
-            i++;
-        }
-
-        return output.toString();
-    }
-
-    /**
-     * Returns true if the given string is found in the ignore list.
-     *
-     * @param subject
-     * @return
-     */
-    public static boolean isStringContainedInListElement(String subject, String list[]) {
-        for (String ignoreItem : list) {
-            if (subject.contains(ignoreItem)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

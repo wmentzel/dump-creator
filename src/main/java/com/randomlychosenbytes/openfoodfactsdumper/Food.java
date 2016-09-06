@@ -1,7 +1,5 @@
 package com.randomlychosenbytes.openfoodfactsdumper;
 
-import com.randomlychosenbytes.openfoodfactsdumper.Portion;
-import com.randomlychosenbytes.openfoodfactsdumper.Utils;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
