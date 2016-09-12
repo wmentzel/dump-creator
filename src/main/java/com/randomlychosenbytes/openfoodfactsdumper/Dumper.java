@@ -27,7 +27,7 @@ public class Dumper {
 
     public static final float KILOJOULE_TO_KCAL_FACTOR = 0.239006f;
 
-    public static final String COUNTRY = "france";
+    public static final String COUNTRY = "usa";
     public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
 
@@ -51,6 +51,7 @@ public class Dumper {
         COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany", "Deutschland", "en:DE"});
         COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States", "U.S.A", "usa", "us", "en:US"});
         COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France", "fr:FR"});
+        COUNTRY_SYNONYMS_MAP.put("spain", new String[]{"Spain", "es:ES", "Espanol"});
     }
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+");
@@ -75,7 +76,7 @@ public class Dumper {
         int maxLength = 0;
         String longestFoodName = "";
 
-        List<Food> foods = new LinkedList<>();
+        Map<String, Food> foodNameBrandMap = new HashMap<>();
 
         try {
             while ((nextLine = reader.readNext()) != null) {
@@ -135,13 +136,16 @@ public class Dumper {
                 Set<Portion> portionSet = getPortions(nextLine[FieldNames.serving_size]);
                 food.setPortions(portionSet);
 
-                foods.add(food);
+                foodNameBrandMap.put(food.getName() + food.getBrands(), food);
                 foodCount++;
             }
 
             System.out.println("-------------------------------STATISTICS-------------------------------");
             System.out.println("Longest name: " + longestFoodName + " (" + maxLength + " characters)");
+            
+            List<Food> foods = new LinkedList<>(foodNameBrandMap.values());
             System.out.println("Number of results: " + foodCount);
+            System.out.println("Number of unique results: " + foods.size());
 
             Collections.sort(foods, new Food.FoodComparator());
             System.out.println("Dump size: " + Utils.writeToFile(foods) + " kB");
@@ -155,7 +159,7 @@ public class Dumper {
         String countrySynonyms[] = COUNTRY_SYNONYMS_MAP.get(countryCode);
 
         for (String synonym : countrySynonyms) {
-            if (countryColumn.equalsIgnoreCase(synonym)) {
+            if (countryColumn.contains(synonym)) {
                 return true;
             }
         }
