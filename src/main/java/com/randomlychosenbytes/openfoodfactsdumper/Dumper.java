@@ -27,7 +27,7 @@ public class Dumper {
 
     public static final float KILOJOULE_TO_KCAL_FACTOR = 0.239006f;
 
-    public static final String COUNTRY = "usa";
+    public static final String COUNTRY = "germany";
     public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
 
@@ -42,16 +42,16 @@ public class Dumper {
     public static final int MAX_LENGTH_BRAND_NAME = 64;
     public static final int MAX_NUM_BRANDS = 3;
 
-    private static final String[] CATEGORIES_BLACKLIST = new String[]{"zu://", "//Property://", "fr:", "en:"};
+    private static final String[] CATEGORIES_BLACKLIST = new String[]{"fr:", "en:", "de:", "//"};
 
     private static Map<String, String[]> COUNTRY_SYNONYMS_MAP;
 
     static {
         COUNTRY_SYNONYMS_MAP = new HashMap<>();
-        COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany", "Deutschland", "en:DE"});
-        COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States", "U.S.A", "usa", "us", "en:US"});
-        COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France", "fr:FR"});
-        COUNTRY_SYNONYMS_MAP.put("spain", new String[]{"Spain", "es:ES", "Espanol"});
+        COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany"});
+        COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States"});
+        COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France"});
+        COUNTRY_SYNONYMS_MAP.put("spain", new String[]{"Spain"});
     }
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+");
@@ -72,6 +72,7 @@ public class Dumper {
 
         String[] nextLine;
         int foodCount = 0;
+        int foodCountForCountry = 0;
 
         int maxLength = 0;
         String longestFoodName = "";
@@ -85,9 +86,11 @@ public class Dumper {
                     continue;
                 }
 
-                if (!countryMatches(COUNTRY, nextLine[FieldNames.countries])) {
+                if (!countryMatches(COUNTRY, nextLine[FieldNames.countries_en])) {
                     continue;
                 }
+                
+                foodCountForCountry++;
 
                 //
                 // Create the food object
@@ -115,9 +118,11 @@ public class Dumper {
                 }
 
                 food.setName(foodName);
-                food.setBrands(Utils.buildUniqueList("", nextLine[FieldNames.brands], CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
+                food.setBrands(Utils.buildUniqueList("", nextLine[FieldNames.brands], 
+                        CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
 
-                String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories] + "," + nextLine[FieldNames.generic_name], CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
+                String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories] + "," + nextLine[FieldNames.generic_name], 
+                        CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
                 food.setCategories(categoriees);
                 food.setBeverage(isBeverage(nextLine[FieldNames.quantity]));
 
@@ -144,6 +149,7 @@ public class Dumper {
             System.out.println("Longest name: " + longestFoodName + " (" + maxLength + " characters)");
             
             List<Food> foods = new LinkedList<>(foodNameBrandMap.values());
+            System.out.println("Number of results for country: " + foodCountForCountry);
             System.out.println("Number of results: " + foodCount);
             System.out.println("Number of unique results: " + foods.size());
 
@@ -159,7 +165,7 @@ public class Dumper {
         String countrySynonyms[] = COUNTRY_SYNONYMS_MAP.get(countryCode);
 
         for (String synonym : countrySynonyms) {
-            if (countryColumn.contains(synonym)) {
+            if (countryColumn.toLowerCase().contains(synonym.toLowerCase())) {
                 return true;
             }
         }
