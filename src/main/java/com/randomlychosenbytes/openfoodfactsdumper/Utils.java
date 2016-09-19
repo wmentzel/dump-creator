@@ -53,9 +53,8 @@ public class Utils {
                 }
 
                 output.append(str);
+                i++;
             }
-
-            i++;
         }
 
         return output.toString();
