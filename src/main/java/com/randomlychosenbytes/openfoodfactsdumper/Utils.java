@@ -24,10 +24,16 @@ public class Utils {
 
     public static String buildUniqueList(String ignore, String filterString, String blacklistArray[], final int maxElementLength, final int maxNumElements) {
         String filterArray[] = filterString.split(",");
-
+        
+        // trim
+        for (int i = 0; i < filterArray.length; i++) {
+            filterArray[i] = filterArray[i].trim();
+        }
+        
+        // unique
         Set<String> set = new HashSet<>();
         set.addAll(Arrays.asList(filterArray));
-
+        
         StringBuilder output = new StringBuilder();
 
         int i = 0;
