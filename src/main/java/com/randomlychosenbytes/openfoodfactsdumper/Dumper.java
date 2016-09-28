@@ -27,7 +27,7 @@ public class Dumper {
 
     public static final float KILOJOULE_TO_KCAL_FACTOR = 0.239006f;
 
-    public static final String COUNTRY = "germany";
+    public static final String COUNTRY = "usa";
     public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
 
@@ -48,8 +48,8 @@ public class Dumper {
 
     static {
         COUNTRY_SYNONYMS_MAP = new HashMap<>();
-        COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany"});
-        COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States"});
+        COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany", "Allemagne", "Deutschland"});
+        COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States", "United-states-of-america"});
         COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France"});
         COUNTRY_SYNONYMS_MAP.put("spain", new String[]{"Spain"});
     }
@@ -121,7 +121,7 @@ public class Dumper {
                 food.setBrands(Utils.buildUniqueList("", nextLine[FieldNames.brands], 
                         CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
 
-                String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories] + "," + nextLine[FieldNames.generic_name], 
+                String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories_en] + "," + nextLine[FieldNames.generic_name], 
                         CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
                 food.setCategories(categoriees);
                 food.setBeverage(isBeverage(nextLine[FieldNames.quantity]));
