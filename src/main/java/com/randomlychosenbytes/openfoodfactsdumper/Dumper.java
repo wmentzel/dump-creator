@@ -118,7 +118,7 @@ public class Dumper {
                 }
 
                 food.setName(foodName);
-                food.setBrands(Utils.buildUniqueList("", nextLine[FieldNames.brands], 
+                food.setBrands(Utils.buildUniqueList(foodName, nextLine[FieldNames.brands], 
                         CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
 
                 String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories_en] + "," + nextLine[FieldNames.generic_name], 
@@ -203,7 +203,8 @@ public class Dumper {
      * @return
      */
     private static boolean isBeverage(String quantityStr) {
-        return quantityStr.contains("l") || quantityStr.contains("ml") || quantityStr.contains("cl");
+        quantityStr = quantityStr.toLowerCase();
+        return quantityStr.contains("litre") || quantityStr.contains("l") || quantityStr.contains("ml") || quantityStr.contains("cl");
     }
 
     private static float getWeightInGrams(String quantityStr) throws NumberFormatException {
