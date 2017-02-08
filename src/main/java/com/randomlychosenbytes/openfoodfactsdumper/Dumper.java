@@ -208,6 +208,7 @@ public class Dumper {
     }
 
     private static float getWeightInGrams(String quantityStr) throws NumberFormatException {
+        quantityStr = quantityStr.toLowerCase();
         float factor = 1;
 
         if (quantityStr.isEmpty()) {
