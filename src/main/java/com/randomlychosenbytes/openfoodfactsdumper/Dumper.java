@@ -1,6 +1,7 @@
 package com.randomlychosenbytes.openfoodfactsdumper;
 
 import com.opencsv.CSVReader;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,13 +22,27 @@ import java.util.regex.Pattern;
 /**
  * OpenFoodFactsDumpCreator 0.1 Alpha
  *
+ * Query open food facts database for coutnries and the number of food available for them
+ * SELECT countries_en, COUNT(*) as count from foods GROUP BY countries_en ORDER BY count DESC
  * @author wmentzel
  */
 public class Dumper {
 
     public static final float KILOJOULE_TO_KCAL_FACTOR = 0.239006f;
-    public static final String COUNTRY = "usa";
-    public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
+
+    // countries for which OFF has at least 1000 foods
+    public static final String COUNTRIES[] = {
+            "United States",
+            "Germany",
+            "France",
+            "Spain",
+            "United Kingdom",
+            "Belgium",
+            "Switzerland",
+            "Australia",
+            "Italy"
+    };
+
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
 
     //
@@ -44,104 +59,107 @@ public class Dumper {
     public static void main(String args[]) {
         CSVReader reader;
 
-        try {
-            FileInputStream fis = new FileInputStream(FILE_IMPORT_PATH);
-            reader = new CSVReader(new InputStreamReader(fis, "UTF-8"), '\t');
-        } catch (FileNotFoundException ex) {
-            System.out.println("The " + FILE_IMPORT_PATH + " could not be found!");
-            return;
-        } catch (UnsupportedEncodingException ex) {
-            System.out.println("The chosen file is not encoded in UTF8");
-            return;
-        }
+        for (String countryName : COUNTRIES) {
 
-        String[] nextLine;
-        int foodCount = 0;
-        int foodCountForCountry = 0;
-
-        int maxLength = 0;
-        String longestFoodName = "";
-
-        Map<String, Food> foodNameBrandMap = new HashMap<>();
-
-        try {
-            while ((nextLine = reader.readNext()) != null) {
-
-                if (nextLine.length < 159) { // is the line invalid?
-                    continue;
-                }
-
-                if (!Utils.countryMatches(COUNTRY, nextLine[FieldNames.countries_en])) {
-                    continue;
-                }
-                
-                foodCountForCountry++;
-
-                //
-                // Create the food object
-                //
-                Food food = new Food();
-
-                String foodName = nextLine[FieldNames.product_name];
-
-                foodName = foodName.trim();
-
-                // remove unwanted stuff
-                foodName = foodName.replace("&quot;", "");
-
-                if (foodName.isEmpty()) {
-                    continue;
-                }
-
-                if (foodName.length() > maxLength) {
-                    maxLength = foodName.length();
-                    longestFoodName = foodName;
-                }
-
-                if (foodName.length() > MAX_LENGTH_FOOD_NAME) {
-                    continue;
-                }
-
-                food.setName(foodName);
-                food.setBrands(Utils.buildUniqueList(foodName, nextLine[FieldNames.brands], 
-                        CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
-
-                String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories_en] + "," + nextLine[FieldNames.generic_name], 
-                        CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
-                food.setCategories(categoriees);
-                food.setBeverage(Utils.isBeverage(nextLine[FieldNames.quantity]));
-
-                try {
-                    int kiloJoule = new Integer(nextLine[FieldNames.energy_100g]);
-                    food.setCalories(Math.round(kiloJoule * KILOJOULE_TO_KCAL_FACTOR));
-                    food.setWeight(100.0f);
-                    food.setProtein(new Float(nextLine[FieldNames.proteins_100g]));
-                    food.setCarbohydrate(new Float(nextLine[FieldNames.carbohydrates_100g]));
-                    food.setFat(new Float(nextLine[FieldNames.fat_100g]));
-                } catch (NumberFormatException e) {
-                    continue;
-                }
-
-                //System.out.println(food.toCsvLine());
-                Set<Portion> portionSet = Utils.getPortions(nextLine[FieldNames.serving_size]);
-                food.setPortions(portionSet);
-
-                foodNameBrandMap.put(food.getName() + food.getBrands(), food);
-                foodCount++;
+            try {
+                FileInputStream fis = new FileInputStream(FILE_IMPORT_PATH);
+                reader = new CSVReader(new InputStreamReader(fis, "UTF-8"), '\t');
+            } catch (FileNotFoundException ex) {
+                System.out.println("The " + FILE_IMPORT_PATH + " could not be found!");
+                return;
+            } catch (UnsupportedEncodingException ex) {
+                System.out.println("The chosen file is not encoded in UTF8");
+                return;
             }
 
-            System.out.println("Longest name: " + longestFoodName + " (" + maxLength + " characters)");
-            
-            List<Food> foods = new LinkedList<>(foodNameBrandMap.values());
-            System.out.println("Number of results for country: " + foodCountForCountry);
-            System.out.println("Number of results: " + foodCount);
-            System.out.println("Number of unique results: " + foods.size());
+            String[] nextLine;
+            int foodCount = 0;
+            int foodCountForCountry = 0;
 
-            Collections.sort(foods, new Food.FoodComparator());
-            System.out.println("Dump size: " + Utils.writeToFile(foods) + " kB");
+            int maxLength = 0;
+            String longestFoodName = "";
 
-        } catch (IOException ex) {
-            Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
+            Map<String, Food> foodNameBrandMap = new HashMap<>();
+
+            try {
+                while ((nextLine = reader.readNext()) != null) {
+
+                    if (nextLine.length < 159) { // is the line invalid?
+                        continue;
+                    }
+
+                    if (!nextLine[FieldNames.countries_en].contains(countryName)){
+                        continue;
+                    }
+
+                    foodCountForCountry++;
+
+                    //
+                    // Create the food object
+                    //
+                    Food food = new Food();
+
+                    String foodName = nextLine[FieldNames.product_name];
+
+                    foodName = foodName.trim();
+
+                    // remove unwanted stuff
+                    foodName = foodName.replace("&quot;", "");
+
+                    if (foodName.isEmpty()) {
+                        continue;
+                    }
+
+                    if (foodName.length() > maxLength) {
+                        maxLength = foodName.length();
+                        longestFoodName = foodName;
+                    }
+
+                    if (foodName.length() > MAX_LENGTH_FOOD_NAME) {
+                        continue;
+                    }
+
+                    food.setName(foodName);
+                    food.setBrands(Utils.buildUniqueList(foodName, nextLine[FieldNames.brands],
+                            CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS));
+
+                    String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories_en] + "," + nextLine[FieldNames.generic_name],
+                            CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
+                    food.setCategories(categoriees);
+                    food.setBeverage(Utils.isBeverage(nextLine[FieldNames.quantity]));
+
+                    try {
+                        int kiloJoule = new Integer(nextLine[FieldNames.energy_100g]);
+                        food.setCalories(Math.round(kiloJoule * KILOJOULE_TO_KCAL_FACTOR));
+                        food.setWeight(100.0f);
+                        food.setProtein(new Float(nextLine[FieldNames.proteins_100g]));
+                        food.setCarbohydrate(new Float(nextLine[FieldNames.carbohydrates_100g]));
+                        food.setFat(new Float(nextLine[FieldNames.fat_100g]));
+                    } catch (NumberFormatException e) {
+                        continue;
+                    }
+
+                    //System.out.println(food.toCsvLine());
+                    Set<Portion> portionSet = Utils.getPortions(nextLine[FieldNames.serving_size]);
+                    food.setPortions(portionSet);
+
+                    foodNameBrandMap.put(food.getName() + food.getBrands(), food);
+                    foodCount++;
+                }
+
+                System.out.println("Longest name: " + longestFoodName + " (" + maxLength + " characters)");
+
+                List<Food> foods = new LinkedList<>(foodNameBrandMap.values());
+                System.out.println("Number of results for country: " + foodCountForCountry);
+                System.out.println("Number of results: " + foodCount);
+                System.out.println("Number of unique results: " + foods.size());
+
+                Collections.sort(foods, new Food.FoodComparator());
+                System.out.println("Dump size: " + Utils.writeToFile(foods, countryName) + " kB");
+
+            } catch (IOException ex) {
+                Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
 }
