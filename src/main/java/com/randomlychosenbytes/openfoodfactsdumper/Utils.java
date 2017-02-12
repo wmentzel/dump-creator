@@ -84,7 +84,7 @@ public class Utils {
     }
     
     public static long writeToFile(List<Food> foods, String countryName) throws FileNotFoundException, IOException {
-        final String FILE_EXPORT_PATH = "new/db_dump_" + countryName.replace(" ", "").toLowerCase() + ".csv";
+        final String FILE_EXPORT_PATH = "new/db_dump_" + countryName.replace(' ', '_').toLowerCase() + ".csv";
 
         FileOutputStream fOut = new FileOutputStream(FILE_EXPORT_PATH);
         OutputStreamWriter osw = new OutputStreamWriter(fOut, "UTF-8");
@@ -101,7 +101,7 @@ public class Utils {
         return (long) (fileSizeBytes / 1000.0);
     }
 
-    public static Set<Portion> getPortions(String str) {
+    public static Set<Portion> getPortions(String str, String portionTranslation) {
         Set<Portion> portionsSet = new HashSet<>();
 
         Matcher m = NUMBER_PATTERN.matcher(str);
@@ -112,7 +112,7 @@ public class Utils {
                 if (portionWeight == 0 || portionWeight == 1 || portionWeight == 100) {
                     break;
                 }
-                portionsSet.add(new Portion("1 Portion", portionWeight));
+                portionsSet.add(new Portion("1 " + portionTranslation, portionWeight));
             } catch (NumberFormatException e) {
                 // don't add it
             }

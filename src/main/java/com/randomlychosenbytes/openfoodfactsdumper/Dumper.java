@@ -43,6 +43,18 @@ public class Dumper {
             "Italy"
     };
 
+    public static final String PORTION_TRANSLATION[] = {
+            "portion",
+            "Portion",
+            "portion",
+            "parte",
+            "portion",
+            "deel",
+            "Portion",
+            "portion",
+            "porzione"
+    };
+
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
 
     //
@@ -59,6 +71,7 @@ public class Dumper {
     public static void main(String args[]) {
         CSVReader reader;
 
+        int index = 0;
         for (String countryName : COUNTRIES) {
 
             try {
@@ -140,7 +153,7 @@ public class Dumper {
                     }
 
                     //System.out.println(food.toCsvLine());
-                    Set<Portion> portionSet = Utils.getPortions(nextLine[FieldNames.serving_size]);
+                    Set<Portion> portionSet = Utils.getPortions(nextLine[FieldNames.serving_size], PORTION_TRANSLATION[index]);
                     food.setPortions(portionSet);
 
                     foodNameBrandMap.put(food.getName() + food.getBrands(), food);
@@ -160,6 +173,8 @@ public class Dumper {
             } catch (IOException ex) {
                 Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
             }
+
+            index++;
         }
     }
 }
