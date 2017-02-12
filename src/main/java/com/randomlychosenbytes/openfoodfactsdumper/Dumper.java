@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
 public class Dumper {
 
     public static final float KILOJOULE_TO_KCAL_FACTOR = 0.239006f;
-
     public static final String COUNTRY = "usa";
     public static final String FILE_EXPORT_PATH = "db_dump_" + COUNTRY + ".csv";
     public static final String FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv";
@@ -36,25 +35,11 @@ public class Dumper {
     //
     public static final int MAX_NUM_CATEGORIES = 3;
     public static final int MAX_LENGTH_CATEGORY_NAME = 64;
-
     public static final int MAX_LENGTH_FOOD_NAME = 64;
-
     public static final int MAX_LENGTH_BRAND_NAME = 64;
     public static final int MAX_NUM_BRANDS = 3;
 
     private static final String[] CATEGORIES_BLACKLIST = new String[]{"fr:", "en:", "de:", "//"};
-
-    private static Map<String, String[]> COUNTRY_SYNONYMS_MAP;
-
-    static {
-        COUNTRY_SYNONYMS_MAP = new HashMap<>();
-        COUNTRY_SYNONYMS_MAP.put("germany", new String[]{"Germany", "Allemagne", "Deutschland"});
-        COUNTRY_SYNONYMS_MAP.put("usa", new String[]{"United States", "United-states-of-america"});
-        COUNTRY_SYNONYMS_MAP.put("france", new String[]{"France"});
-        COUNTRY_SYNONYMS_MAP.put("spain", new String[]{"Spain"});
-    }
-
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+");
 
     public static void main(String args[]) {
         CSVReader reader;
@@ -86,7 +71,7 @@ public class Dumper {
                     continue;
                 }
 
-                if (!countryMatches(COUNTRY, nextLine[FieldNames.countries_en])) {
+                if (!Utils.countryMatches(COUNTRY, nextLine[FieldNames.countries_en])) {
                     continue;
                 }
                 
@@ -124,7 +109,7 @@ public class Dumper {
                 String categoriees = Utils.buildUniqueList(foodName, nextLine[FieldNames.categories_en] + "," + nextLine[FieldNames.generic_name], 
                         CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES);
                 food.setCategories(categoriees);
-                food.setBeverage(isBeverage(nextLine[FieldNames.quantity]));
+                food.setBeverage(Utils.isBeverage(nextLine[FieldNames.quantity]));
 
                 try {
                     int kiloJoule = new Integer(nextLine[FieldNames.energy_100g]);
@@ -138,14 +123,13 @@ public class Dumper {
                 }
 
                 //System.out.println(food.toCsvLine());
-                Set<Portion> portionSet = getPortions(nextLine[FieldNames.serving_size]);
+                Set<Portion> portionSet = Utils.getPortions(nextLine[FieldNames.serving_size]);
                 food.setPortions(portionSet);
 
                 foodNameBrandMap.put(food.getName() + food.getBrands(), food);
                 foodCount++;
             }
 
-            System.out.println("-------------------------------STATISTICS-------------------------------");
             System.out.println("Longest name: " + longestFoodName + " (" + maxLength + " characters)");
             
             List<Food> foods = new LinkedList<>(foodNameBrandMap.values());
@@ -160,87 +144,4 @@ public class Dumper {
             Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
-    private static boolean countryMatches(String countryCode, String countryColumn) {
-        String countrySynonyms[] = COUNTRY_SYNONYMS_MAP.get(countryCode);
-
-        for (String synonym : countrySynonyms) {
-            if (countryColumn.toLowerCase().contains(synonym.toLowerCase())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static Set<Portion> getPortions(String str) {
-        Set<Portion> portionsSet = new HashSet<>();
-
-        Matcher m = NUMBER_PATTERN.matcher(str);
-        while (m.find()) {
-            try {
-                float portionWeight = new Float(m.group());
-
-                if (portionWeight == 0 || portionWeight == 1 || portionWeight == 100) {
-                    break;
-                }
-                portionsSet.add(new Portion("1 Portion", portionWeight));
-            } catch (NumberFormatException e) {
-                // don't add it
-            }
-
-            break;
-        }
-
-        return portionsSet;
-    }
-
-    /**
-     * Searches a string for units used for fluids to determine whether the food
-     * is a beverage/fluid. If one is found true is returned, false otherwise.
-     *
-     * @param quantityStr
-     * @return
-     */
-    private static boolean isBeverage(String quantityStr) {
-        quantityStr = quantityStr.toLowerCase();
-        return quantityStr.contains("litre") || quantityStr.contains("l") || quantityStr.contains("ml") || quantityStr.contains("cl");
-    }
-
-    private static float getWeightInGrams(String quantityStr) throws NumberFormatException {
-        quantityStr = quantityStr.toLowerCase();
-        float factor = 1;
-
-        if (quantityStr.isEmpty()) {
-            return 100f;
-        }
-
-        if (quantityStr.contains("kg") || quantityStr.contains("l")) {
-            quantityStr = quantityStr.replace("kg", "");
-            factor = 1000f;
-        }
-
-        if (quantityStr.contains("l")) {
-            quantityStr = quantityStr.replace("l", "");
-            factor = 1000f;
-        }
-
-        if (quantityStr.contains("g")) {
-            quantityStr = quantityStr.replace("g", "");
-            factor = 1f;
-        }
-
-        if (quantityStr.contains("ml")) {
-            quantityStr = quantityStr.replace("ml", "");
-            factor = 1f;
-        }
-
-        if (quantityStr.contains("cl")) {
-            quantityStr = quantityStr.replace("g", "");
-            factor = 10f;
-        }
-
-        return new Float(quantityStr) * factor;
-    }
-
 }
