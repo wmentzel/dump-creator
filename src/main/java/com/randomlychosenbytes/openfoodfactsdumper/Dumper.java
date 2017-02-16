@@ -86,7 +86,7 @@ public class Dumper {
             }
 
             String[] nextLine;
-            int foodCount = 0;
+            int foodCountAfterFiltering = 0;
             int foodCountForCountry = 0;
 
             int maxLength = 0;
@@ -112,12 +112,7 @@ public class Dumper {
                     //
                     Food food = new Food();
 
-                    String foodName = nextLine[FieldNames.product_name];
-
-                    foodName = foodName.trim();
-
-                    // remove unwanted stuff
-                    foodName = foodName.replace("&quot;", "");
+                    String foodName = nextLine[FieldNames.product_name].trim().replace("&quot;", "");
 
                     if (foodName.isEmpty()) {
                         continue;
@@ -152,24 +147,23 @@ public class Dumper {
                         continue;
                     }
 
-                    //System.out.println(food.toCsvLine());
                     Set<Portion> portionSet = Utils.getPortions(nextLine[FieldNames.serving_size], PORTION_TRANSLATION[index]);
                     food.setPortions(portionSet);
 
                     foodNameBrandMap.put(food.getName() + food.getBrands(), food);
-                    foodCount++;
+                    foodCountAfterFiltering++;
                 }
 
-                System.out.println("Longest name: " + longestFoodName + " (" + maxLength + " characters)");
+                System.out.println(countryName.toUpperCase());
+                System.out.println("Longest food name: " + longestFoodName + " (" + maxLength + " characters)");
 
-                List<Food> foods = new LinkedList<>(foodNameBrandMap.values());
-                System.out.println("Number of results for country: " + foodCountForCountry);
-                System.out.println("Number of results: " + foodCount);
-                System.out.println("Number of unique results: " + foods.size());
+                List<Food> uniqueFilteredFoods = new LinkedList<>(foodNameBrandMap.values());
+                System.out.println("Number of foods overall = " + foodCountForCountry);
+                System.out.println(String.format("Number of foods after filtering = %d (%d are unique)", foodCountAfterFiltering, uniqueFilteredFoods.size()));
 
-                Collections.sort(foods, new Food.FoodComparator());
-                System.out.println("Dump size: " + Utils.writeToFile(foods, countryName) + " kB");
-
+                Collections.sort(uniqueFilteredFoods, new Food.FoodComparator());
+                System.out.println("Dump size: " + Utils.writeToFile(uniqueFilteredFoods, countryName) + " kB");
+                System.out.println("____________________________________________________________");
             } catch (IOException ex) {
                 Logger.getLogger(Dumper.class.getName()).log(Level.SEVERE, null, ex);
             }
