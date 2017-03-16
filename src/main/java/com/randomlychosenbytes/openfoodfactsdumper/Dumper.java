@@ -59,15 +59,30 @@ public class Dumper {
 
     public static void main(String args[]) {
 
-        List<CSVRecord> csvRecords;
+        List<CSVRecord> csvRecords = new LinkedList<>();
+        int numErrors = 0;
 
         try {
             FileReader fileReader = new FileReader(FILE_IMPORT_PATH);
             CSVFormat csvFileFormat = CSVFormat.DEFAULT.withSkipHeaderRecord().withDelimiter('\t');
             CSVParser csvFileParser = new CSVParser(fileReader, csvFileFormat);
-            csvRecords = csvFileParser.getRecords();
+
+            Iterator<CSVRecord> it = csvFileParser.iterator();
+
+            boolean hasNext = true;
+
+            while(hasNext){
+                try {
+                    hasNext = it.hasNext();
+                    csvRecords.add(it.next());
+                } catch (Exception ex) {
+                    numErrors++;
+                    ex.printStackTrace();
+                }
+            }
+
         } catch (IOException ex) {
-            System.out.println("The " + FILE_IMPORT_PATH + " could not be found!");
+            ex.printStackTrace();
             return;
         }
 
@@ -160,5 +175,7 @@ public class Dumper {
 
             index++;
         }
+
+        System.out.println(numErrors + " lines were not formatted properly!");
     }
 }
