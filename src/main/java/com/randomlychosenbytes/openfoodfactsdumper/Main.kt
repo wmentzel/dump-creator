@@ -59,9 +59,7 @@ fun main(args: Array<String>) {
         return
     }
 
-    var index = 0
-
-    for (countryName in COUNTRIES) {
+    for ((index, countryName) in COUNTRIES.withIndex()) {
         var foodCountAfterFiltering = 0
         var foodCountForCountry = 0
 
@@ -146,7 +144,6 @@ fun main(args: Array<String>) {
 
         println("____________________________________________________________")
 
-        index++
     }
 
     println(numErrors.toString() + " lines were not formatted properly!")

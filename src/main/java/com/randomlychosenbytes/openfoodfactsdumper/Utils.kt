@@ -22,14 +22,13 @@ object Utils {
 
         val output = StringBuilder()
 
-        var i = 0
-        for (name in set) {
+        for ((i, name) in set.withIndex()) {
 
             if (i == maxNumElements) { // three cateogies are enough
                 break
             }
 
-            var str = name.trim()
+            val str = name.trim()
             val isNotTheFoodName = str != ignore
             val isNotOnlyWhiteSpaces = str.replace(" ".toRegex(), "").length != 0
             val isNotEmpty = !str.isEmpty()
@@ -45,7 +44,6 @@ object Utils {
                 }
 
                 output.append(str)
-                i++
             }
         }
 
