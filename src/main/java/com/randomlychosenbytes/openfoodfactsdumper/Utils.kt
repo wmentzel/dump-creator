@@ -68,7 +68,7 @@ object Utils {
         val osw = OutputStreamWriter(fOut, "UTF-8")
 
         foods.forEach {
-            osw.write(it.toString() + "\n") // {} is a portion json string
+            osw.write(it.toCsvLine() + "\n") // {} is a portion json string
         }
 
         osw.flush()
