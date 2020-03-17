@@ -1,150 +1,140 @@
 package com.randomlychosenbytes.openfoodfactsdumper
 
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVRecord
+import java.io.File
 import java.io.FileReader
-import java.io.IOException
 import java.util.*
 
 /**
  * OpenFoodFactsDumpCreator 0.1 Alpha
- * Query open food facts database for coutnries and the number of food available for them
+ * Query open food facts database for countries and the number of food available for them
  * SELECT countries_en, COUNT(*) as count from foods GROUP BY countries_en ORDER BY count DESC
 
  * @author wmentzel
  */
 
-val KILOJOULE_TO_KCAL_FACTOR = 0.239006f
-val COUNTRIES = arrayOf("United States", "Germany", "France", "Spain", "United Kingdom", "Belgium", "Switzerland", "Australia", "Italy")
-val PORTION_TRANSLATION = arrayOf("portion", "Portion", "portion", "parte", "portion", "deel", "Portion", "portion", "porzione")
-val FILE_IMPORT_PATH = "en.openfoodfacts.org.products.csv"
+const val KILOJOULE_TO_KCAL_FACTOR = 0.239006f
+const val FILE_IMPORT_PATH = "/home/willi/Downloads/off"
+val countries = arrayOf("Belgium", "United States", "Germany", "France", "Spain", "United Kingdom", "Switzerland", "Australia", "Italy")
+val portionTranslations = arrayOf("deel", "portion", "Portion", "portion", "parte", "portion", "Portion", "portion", "porzione")
+val countryNameToPortionTranslation = countries.zip(portionTranslations).toMap()
 
 //
 // Constraints
 //
-val MAX_NUM_CATEGORIES = 3
-val MAX_LENGTH_CATEGORY_NAME = 64
-val MAX_LENGTH_FOOD_NAME = 64
-val MAX_LENGTH_BRAND_NAME = 64
-val MAX_NUM_BRANDS = 3
+const val MAX_NUM_CATEGORIES = 3
+const val MAX_LENGTH_CATEGORY_NAME = 64
+const val MAX_LENGTH_FOOD_NAME = 64
+const val MAX_LENGTH_BRAND_NAME = 64
+const val MAX_NUM_BRANDS = 3
 val CATEGORIES_BLACKLIST = arrayOf("fr:", "en:", "de:", "//")
 
-fun main(args: Array<String>) {
-    val csvRecords = mutableListOf<CSVRecord>()
-    var numErrors = 0
+var columnToIndex: Map<String, Int>? = null
 
-    try {
-        val fileReader = FileReader(FILE_IMPORT_PATH)
-        val csvFileFormat = CSVFormat.DEFAULT.withSkipHeaderRecord().withDelimiter('\t')
-        val csvFileParser = CSVParser(fileReader, csvFileFormat)
+fun main() {
+    val countryFiles = countries.associate { it to File("$FILE_IMPORT_PATH/$it") }
 
-        val it = csvFileParser.iterator()
+    timeIt("Partition big file into country specific smaller ones") {
+        File("$FILE_IMPORT_PATH/en.openfoodfacts.org.products.csv").forEachLine { line ->
 
-        var hasNext = true
-
-        while (hasNext) {
-            try {
-                hasNext = it.hasNext()
-                csvRecords.add(it.next())
-            } catch (ex: Exception) {
-                numErrors++
-                ex.printStackTrace()
+            if (columnToIndex == null) {
+                columnToIndex = line.split('\t').withIndex().associate { it.value to it.index }
             }
 
+            val countryName = line.split('\t')[columnToIndex!!.getValue("countries_en")]
+            if (countryName in countries) {
+                countryFiles.getValue(countryName).appendText("$line\n")
+            }
         }
-
-    } catch (ex: IOException) {
-        ex.printStackTrace()
-        return
     }
 
-    for ((index, countryName) in COUNTRIES.withIndex()) {
-        var foodCountAfterFiltering = 0
-        var foodCountForCountry = 0
+    timeIt("Create a CC compatible file for each country") {
+        countries.forEach { countryName ->
+            timeIt("for $countryName") {
+                val csvRecords = LinkedList<CSVRecord>()
 
-        var maxLength = 0
-        var longestFoodName = ""
+                FileReader("$FILE_IMPORT_PATH/$countryName").forEachCsvRecord {
+                    csvRecords.add(it)
+                }
 
-        val foodNameBrandMap = HashMap<String, Food>()
+                val foods = getFoodListFromCSVRecords(csvRecords, countryNameToPortionTranslation.getValue(countryName))
 
-        for (record in csvRecords) {
-
-            if (record.size() < 159) { // is the line invalid?
-                continue
+                writeFoodListToFile(foods, "$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
             }
+        }
+    }
+}
 
-            if (!record.get(FieldNames.countries_en).contains(countryName)) {
-                continue
-            }
+fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: String): List<Food> {
+    var foodCountAfterFiltering = 0
+    var foodCountForCountry = 0
 
-            foodCountForCountry++
+    var maxLength = 0
+    var longestFoodName = ""
 
-            //
-            // Create the food object
-            //
-            val food = Food()
+    val foodNameBrandMap = HashMap<String, Food>()
 
-            val foodName = record.get(FieldNames.product_name).trim().replace("&quot;", "")
+    for (record in csvRecords) {
 
-            if (foodName.isEmpty()) {
-                continue
-            }
-
-            if (foodName.length > maxLength) {
-                maxLength = foodName.length
-                longestFoodName = foodName
-            }
-
-            if (foodName.length > MAX_LENGTH_FOOD_NAME) {
-                continue
-            }
-
-            food.name = foodName
-            food.brands = Utils.buildUniqueList(foodName, record.get(FieldNames.brands),
-                    CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS)
-
-            val categoriees = Utils.buildUniqueList(foodName, record.get(FieldNames.categories_en) + "," + record.get(FieldNames.generic_name),
-                    CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES)
-            food.categories = categoriees
-            food.isBeverage = Utils.isBeverage(record.get(FieldNames.quantity))
-
-            try {
-                val kiloJoule = record.get(FieldNames.energy_100g).toInt()
-                food.calories = Math.round(kiloJoule * KILOJOULE_TO_KCAL_FACTOR).toInt()
-                food.weight = 100.0f
-                food.protein = record.get(FieldNames.proteins_100g).toFloat()
-                food.carbohydrate = record.get(FieldNames.carbohydrates_100g).toFloat()
-                food.fat = record.get(FieldNames.fat_100g).toFloat()
-            } catch (e: NumberFormatException) {
-                continue
-            }
-
-            val portionSet = Utils.getPortions(record.get(FieldNames.serving_size), PORTION_TRANSLATION[index])
-            food.portions = portionSet
-
-            foodNameBrandMap.put(food.name + food.brands, food)
-            foodCountAfterFiltering++
+        if (record.size() < 159) { // is the line invalid?
+            continue
         }
 
-        println(countryName.toUpperCase())
-        println("Longest food name: $longestFoodName ($maxLength characters)")
+        foodCountForCountry++
 
-        val uniqueFilteredFoods = foodNameBrandMap.values.toMutableList()
-        println("Number of foods overall = $foodCountForCountry")
-        println(String.format("Number of foods after filtering = %d (%d are unique)", foodCountAfterFiltering, uniqueFilteredFoods.size))
+        //
+        // Create the food object
+        //
+        val food = Food()
 
-        val sorted = uniqueFilteredFoods.sortedWith(compareBy({ it.name }))
+        val foodName = record.get(columnToIndex!!.getValue("product_name")).trim().replace("&quot;", "")
+
+        if (foodName.isEmpty()) {
+            continue
+        }
+
+        if (foodName.length > maxLength) {
+            maxLength = foodName.length
+            longestFoodName = foodName
+        }
+
+        if (foodName.length > MAX_LENGTH_FOOD_NAME) {
+            continue
+        }
+
+        food.name = foodName
+        food.brands = buildUniqueList(foodName, record.get(columnToIndex!!.getValue("brands")),
+                CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS)
+
+        val categoriees = buildUniqueList(foodName, record.get(columnToIndex!!.getValue("categories_en")) + "," + record.get(columnToIndex!!.getValue("generic_name")),
+                CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES)
+        food.categories = categoriees
+        food.isBeverage = isBeverage(record.get(columnToIndex!!.getValue("quantity")))
 
         try {
-            println("Dump size: " + Utils.writeToFile(sorted, countryName) + " kB")
-        } catch (e: IOException) {
-            e.printStackTrace()
+            val kiloJoule = record.get(columnToIndex!!.getValue("energy_100g")).toInt()
+            food.calories = Math.round(kiloJoule * KILOJOULE_TO_KCAL_FACTOR)
+            food.weight = 100.0f
+            food.protein = record.get(columnToIndex!!.getValue("proteins_100g")).toFloat()
+            food.carbohydrate = record.get(columnToIndex!!.getValue("carbohydrates_100g")).toFloat()
+            food.fat = record.get(columnToIndex!!.getValue("fat_100g")).toFloat()
+        } catch (e: NumberFormatException) {
+            continue
         }
 
-        println("____________________________________________________________")
+        food.portions = getPortions(record.get(columnToIndex!!.getValue("serving_size")), portionTranslation)
 
+        foodNameBrandMap[food.name + food.brands] = food
+        foodCountAfterFiltering++
     }
 
-    println("$numErrors lines were not formatted properly!")
+
+    println("Longest food name: $longestFoodName ($maxLength characters)")
+
+    val uniqueFilteredFoods = foodNameBrandMap.values.toMutableList()
+    println("Number of foods overall = $foodCountForCountry")
+    println(String.format("Number of foods after filtering = %d (%d are unique)", foodCountAfterFiltering, uniqueFilteredFoods.size))
+
+    return uniqueFilteredFoods.sortedWith(compareBy({ it.name }))
 }
+
