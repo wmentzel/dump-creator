@@ -131,7 +131,7 @@ fun main(args: Array<String>) {
         println("Longest food name: $longestFoodName ($maxLength characters)")
 
         val uniqueFilteredFoods = foodNameBrandMap.values.toMutableList()
-        println("Number of foods overall = " + foodCountForCountry)
+        println("Number of foods overall = $foodCountForCountry")
         println(String.format("Number of foods after filtering = %d (%d are unique)", foodCountAfterFiltering, uniqueFilteredFoods.size))
 
         val sorted = uniqueFilteredFoods.sortedWith(compareBy({ it.name }))
@@ -146,5 +146,5 @@ fun main(args: Array<String>) {
 
     }
 
-    println(numErrors.toString() + " lines were not formatted properly!")
+    println("$numErrors lines were not formatted properly!")
 }
