@@ -8,6 +8,10 @@ import java.io.FileReader
 import java.util.regex.Pattern
 import kotlin.system.measureTimeMillis
 
+const val KILOJOULE_TO_KCAL_FACTOR = 0.239006f
+
+val countryNameToPortionTranslation = countries.zip(portionTranslations).toMap()
+
 fun buildUniqueList(
         ignore: String,
         str: String,

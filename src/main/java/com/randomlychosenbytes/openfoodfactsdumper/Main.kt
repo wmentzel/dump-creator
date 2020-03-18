@@ -10,25 +10,7 @@ import kotlin.math.roundToInt
  * OpenFoodFactsDumpCreator 0.1 Alpha
  * Query open food facts database for countries and the number of food available for them
  * SELECT countries_en, COUNT(*) as count from foods GROUP BY countries_en ORDER BY count DESC
-
- * @author wmentzel
  */
-
-const val KILOJOULE_TO_KCAL_FACTOR = 0.239006f
-const val FILE_IMPORT_PATH = "/home/willi/Downloads/off"
-val countries = arrayOf("Belgium", "United States", "Germany", "France", "Spain", "United Kingdom", "Switzerland", "Australia", "Italy")
-val portionTranslations = arrayOf("deel", "portion", "Portion", "portion", "parte", "portion", "Portion", "portion", "porzione")
-val countryNameToPortionTranslation = countries.zip(portionTranslations).toMap()
-
-//
-// Constraints
-//
-const val MAX_NUM_CATEGORIES = 3
-const val MAX_LENGTH_CATEGORY_NAME = 64
-const val MAX_LENGTH_FOOD_NAME = 64
-const val MAX_LENGTH_BRAND_NAME = 64
-const val MAX_NUM_BRANDS = 3
-val CATEGORIES_BLACKLIST = arrayOf("fr:", "en:", "de:", "//")
 
 var columnToIndex: Map<String, Int>? = null
 
