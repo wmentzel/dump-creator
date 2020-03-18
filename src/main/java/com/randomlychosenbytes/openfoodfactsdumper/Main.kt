@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
 var columnToIndex: Map<String, Int>? = null
 
 fun main() {
-    val countryFiles = countries.associate { it to File("$FILE_IMPORT_PATH/$it") }
+    val countryFiles = countryNameToPortionTranslationMap.keys.associate { it to File("$FILE_IMPORT_PATH/$it") }
 
     // clear old files
     countryFiles.values.filter { it.exists() }.forEach { it.delete() }
@@ -28,14 +28,14 @@ fun main() {
             }
 
             val countryName = line.split('\t')[columnToIndex!!.getValue("countries_en")]
-            if (countryName in countries) {
+            if (countryName in countryNameToPortionTranslationMap.keys) {
                 countryFiles.getValue(countryName).appendText("$line\n")
             }
         }
     }
 
     timeIt("Create a CC compatible file for each country") {
-        countries.forEach { countryName ->
+        countryNameToPortionTranslationMap.keys.forEach { countryName ->
             timeIt("for $countryName") {
                 val csvRecords = LinkedList<CSVRecord>()
 
@@ -43,7 +43,7 @@ fun main() {
                     csvRecords.add(it)
                 }
 
-                val foods = getFoodListFromCSVRecords(csvRecords, countryNameToPortionTranslation.getValue(countryName))
+                val foods = getFoodListFromCSVRecords(csvRecords, countryNameToPortionTranslationMap.getValue(countryName))
 
                 val destinationFile = File("$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
                 destinationFile.delete()

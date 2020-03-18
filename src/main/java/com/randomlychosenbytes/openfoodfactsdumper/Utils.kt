@@ -10,7 +10,17 @@ import kotlin.system.measureTimeMillis
 
 const val KILOJOULE_TO_KCAL_FACTOR = 0.239006f
 
-val countryNameToPortionTranslation = countries.zip(portionTranslations).toMap()
+val countryNameToPortionTranslationMap = mapOf(
+        "Australia" to "portion",
+        "Belgium" to "deel",
+        //"France" to "portion", // currently too much data for the way this program processes it java.lang.OutOfMemoryError
+        "Germany" to "Portion",
+        "Italy" to "porzione",
+        "Spain" to "parte",
+        "Switzerland" to "Portion",
+        "United Kingdom" to "portion",
+        "United States" to "portion"
+)
 
 fun buildUniqueList(
         ignore: String,

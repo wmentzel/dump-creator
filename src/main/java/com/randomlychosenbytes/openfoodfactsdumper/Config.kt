@@ -2,30 +2,6 @@ package com.randomlychosenbytes.openfoodfactsdumper
 
 const val FILE_IMPORT_PATH = "/home/willi/Downloads/off"
 
-val countries = arrayOf(
-        "Belgium",
-        "United States",
-        "Germany",
-        "France",
-        "Spain",
-        "United Kingdom",
-        "Switzerland",
-        "Australia",
-        "Italy"
-)
-
-val portionTranslations = arrayOf(
-        "deel",
-        "portion",
-        "Portion",
-        "portion",
-        "parte",
-        "portion",
-        "Portion",
-        "portion",
-        "porzione"
-)
-
 //
 // Constraints
 //
