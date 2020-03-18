@@ -34,6 +34,9 @@ var columnToIndex: Map<String, Int>? = null
 fun main() {
     val countryFiles = countries.associate { it to File("$FILE_IMPORT_PATH/$it") }
 
+    // clear old files
+    countryFiles.values.filter { it.exists() }.forEach { it.delete() }
+
     timeIt("Partition big file into country specific smaller ones") {
         File("$FILE_IMPORT_PATH/en.openfoodfacts.org.products.csv").forEachLine { line ->
 
@@ -59,7 +62,9 @@ fun main() {
 
                 val foods = getFoodListFromCSVRecords(csvRecords, countryNameToPortionTranslation.getValue(countryName))
 
-                writeFoodListToFile(foods, "$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
+                val destinationFile = File("$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
+                destinationFile.delete()
+                writeFoodListToFile(foods, destinationFile)
             }
         }
     }
