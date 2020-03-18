@@ -72,21 +72,12 @@ fun main() {
 }
 
 fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: String): List<Food> {
-    var foodCountAfterFiltering = 0
-    var foodCountForCountry = 0
 
-    var maxLength = 0
-    var longestFoodName = ""
+    val foodNameBrandMap = csvRecords.mapNotNull { record ->
 
-    val foodNameBrandMap = HashMap<String, Food>()
-
-    for (record in csvRecords) {
-
-        if (record.size() < 159) { // is the line invalid?
-            continue
+        if (record.size() < columnToIndex!!.size) { // is the line invalid?
+            null
         }
-
-        foodCountForCountry++
 
         //
         // Create the food object
@@ -96,16 +87,11 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
         val foodName = record.get(columnToIndex!!.getValue("product_name")).trim().replace("&quot;", "")
 
         if (foodName.isEmpty()) {
-            continue
-        }
-
-        if (foodName.length > maxLength) {
-            maxLength = foodName.length
-            longestFoodName = foodName
+            null
         }
 
         if (foodName.length > MAX_LENGTH_FOOD_NAME) {
-            continue
+            null
         }
 
         food.name = foodName
@@ -125,23 +111,19 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
             food.carbohydrate = record.get(columnToIndex!!.getValue("carbohydrates_100g")).toFloat()
             food.fat = record.get(columnToIndex!!.getValue("fat_100g")).toFloat()
         } catch (e: NumberFormatException) {
-            continue
+            null
         }
 
         food.portions = getFirstNumberInString(record.get(columnToIndex!!.getValue("serving_size")))?.let {
             setOf(Portion(portionTranslation, it))
         } ?: setOf()
 
-        foodNameBrandMap[food.name + food.brands] = food
-        foodCountAfterFiltering++
-    }
-
-
-    println("Longest food name: $longestFoodName ($maxLength characters)")
+        (food.name + food.brands) to food
+    }.toMap()
 
     val uniqueFilteredFoods = foodNameBrandMap.values
-    println("Number of foods overall = $foodCountForCountry")
-    println(String.format("Number of foods after filtering = %d (%d are unique)", foodCountAfterFiltering, uniqueFilteredFoods.size))
+    println("Number of foods overall = ${csvRecords.size}")
+    println(String.format("Number of foods after filtering = %d (%d are unique)", foodNameBrandMap.size, uniqueFilteredFoods.size))
 
     return uniqueFilteredFoods.sortedBy { it.name }
 }
