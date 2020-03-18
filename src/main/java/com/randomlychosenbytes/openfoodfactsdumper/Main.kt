@@ -55,10 +55,9 @@ fun main() {
 
 fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: String): List<Food> {
 
-    val foodNameBrandMap = csvRecords.mapNotNull { record ->
-
+    val foodNameBrandMap = csvRecords.mapNotNull(fun(record: CSVRecord): Pair<String, Food>? {
         if (record.size() < columnToIndex!!.size) { // is the line invalid?
-            null
+            return null
         }
 
         //
@@ -69,11 +68,11 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
         val foodName = record.get(columnToIndex!!.getValue("product_name")).trim().replace("&quot;", "")
 
         if (foodName.isEmpty()) {
-            null
+            return null
         }
 
         if (foodName.length > MAX_LENGTH_FOOD_NAME) {
-            null
+            return null
         }
 
         food.name = foodName
@@ -93,15 +92,15 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
             food.carbohydrate = record.get(columnToIndex!!.getValue("carbohydrates_100g")).toFloat()
             food.fat = record.get(columnToIndex!!.getValue("fat_100g")).toFloat()
         } catch (e: NumberFormatException) {
-            null
+            return null
         }
 
         food.portions = getFirstNumberInString(record.get(columnToIndex!!.getValue("serving_size")))?.let {
             setOf(Portion(portionTranslation, it))
         } ?: setOf()
 
-        (food.name + food.brands) to food
-    }.toMap()
+        return (food.name + food.brands) to food
+    }).toMap()
 
     val uniqueFilteredFoods = foodNameBrandMap.values
     println("Number of foods overall = ${csvRecords.size}")
