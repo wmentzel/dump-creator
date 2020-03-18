@@ -4,6 +4,7 @@ import org.apache.commons.csv.CSVRecord
 import java.io.File
 import java.io.FileReader
 import java.util.*
+import kotlin.math.roundToInt
 
 /**
  * OpenFoodFactsDumpCreator 0.1 Alpha
@@ -118,7 +119,7 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
 
         try {
             val kiloJoule = record.get(columnToIndex!!.getValue("energy_100g")).toInt()
-            food.calories = Math.round(kiloJoule * KILOJOULE_TO_KCAL_FACTOR)
+            food.calories = (kiloJoule * KILOJOULE_TO_KCAL_FACTOR).roundToInt()
             food.weight = 100.0f
             food.protein = record.get(columnToIndex!!.getValue("proteins_100g")).toFloat()
             food.carbohydrate = record.get(columnToIndex!!.getValue("carbohydrates_100g")).toFloat()
@@ -127,7 +128,9 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
             continue
         }
 
-        food.portions = getPortions(record.get(columnToIndex!!.getValue("serving_size")), portionTranslation)
+        food.portions = getFirstNumberInString(record.get(columnToIndex!!.getValue("serving_size")))?.let {
+            setOf(Portion(portionTranslation, it))
+        } ?: setOf()
 
         foodNameBrandMap[food.name + food.brands] = food
         foodCountAfterFiltering++
@@ -136,10 +139,10 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
 
     println("Longest food name: $longestFoodName ($maxLength characters)")
 
-    val uniqueFilteredFoods = foodNameBrandMap.values.toMutableList()
+    val uniqueFilteredFoods = foodNameBrandMap.values
     println("Number of foods overall = $foodCountForCountry")
     println(String.format("Number of foods after filtering = %d (%d are unique)", foodCountAfterFiltering, uniqueFilteredFoods.size))
 
-    return uniqueFilteredFoods.sortedWith(compareBy({ it.name }))
+    return uniqueFilteredFoods.sortedBy { it.name }
 }
 

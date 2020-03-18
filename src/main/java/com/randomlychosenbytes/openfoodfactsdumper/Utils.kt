@@ -5,11 +5,8 @@ import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVRecord
 import java.io.File
 import java.io.FileReader
-import java.util.*
 import java.util.regex.Pattern
 import kotlin.system.measureTimeMillis
-
-val NUMBER_PATTERN = Pattern.compile("-?\\d+")
 
 fun buildUniqueList(
         ignore: String,
@@ -34,34 +31,31 @@ fun buildUniqueList(
             isNotTheFoodName && isNotEmpty && isLengthOk && isNotOnlyWhiteSpaces && isNotOnIgnoreList
         }.joinToString()
 
-fun writeFoodListToFile(foods: List<Food>, destinationFilePath: String) {
-    File(destinationFilePath).writer().use { writer ->
+fun writeFoodListToFile(foods: List<Food>, destinationFile: File) {
+    destinationFile.writer().use { writer ->
         foods.forEach {
             writer.write("${it.toCsvLine()}\n")
         }
     }
 }
 
-fun getPortions(str: String, portionTranslation: String): Set<Portion> {
-    val portionsSet = HashSet<Portion>()
+val anyNumberRegex = Pattern.compile("""\d*[,.]?\d+""")
 
-    val m = NUMBER_PATTERN.matcher(str)
-    while (m.find()) {
-        try {
-            val portionWeight = m.group().toFloat()
+fun getFirstNumberInString(str: String): Float? {
 
-            if (portionWeight == 0f || portionWeight == 1f || portionWeight == 100f) {
-                break
-            }
-            portionsSet.add(Portion("1 $portionTranslation", portionWeight))
-        } catch (e: NumberFormatException) {
-            // don't add it
-        }
+    val m = anyNumberRegex.matcher(str)
 
-        break
+    if (!m.find()) {
+        return null
     }
 
-    return portionsSet
+    val portionWeight = m.group().replace(",", ".").toFloatOrNull() ?: return null
+
+    if (portionWeight == 0f || portionWeight == 1f || portionWeight == 100f) {
+        return null
+    }
+
+    return portionWeight
 }
 
 fun isBeverage(quantityStr: String) = with(quantityStr.toLowerCase()) {
