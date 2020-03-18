@@ -79,7 +79,7 @@ fun isBeverage(quantityStr: String) = with(quantityStr.toLowerCase()) {
 fun <T> timeIt(message: String, block: () -> T) {
     println("$message started")
     val seconds = (measureTimeMillis { block() } / 1000.0).toInt()
-    println("$message finished (took $seconds)")
+    println("$message finished (took $seconds s)")
 }
 
 internal fun FileReader.forEachCsvRecord(operation: (CSVRecord) -> Unit) {
