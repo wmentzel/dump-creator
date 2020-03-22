@@ -1,9 +1,10 @@
 package com.randomlychosenbytes.openfoodfactsdumper
 
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVRecord
 import java.io.File
 import java.io.FileReader
-import java.util.*
 import kotlin.math.roundToInt
 
 /**
@@ -37,13 +38,11 @@ fun main() {
     timeIt("Create a CC compatible file for each country") {
         countryNameToPortionTranslationMap.keys.forEach { countryName ->
             timeIt("for $countryName") {
-                val csvRecords = LinkedList<CSVRecord>()
 
-                FileReader("$FILE_IMPORT_PATH/$countryName").forEachCsvRecord {
-                    csvRecords.add(it)
-                }
+                val csvFileFormat = CSVFormat.DEFAULT.withSkipHeaderRecord().withDelimiter('\t')
+                val csvFileParser = CSVParser(FileReader("$FILE_IMPORT_PATH/$countryName"), csvFileFormat)
 
-                val foods = getFoodListFromCSVRecords(csvRecords, countryNameToPortionTranslationMap.getValue(countryName))
+                val foods = getFoodListFromCSVRecords(csvFileParser.asSequence(), countryNameToPortionTranslationMap.getValue(countryName))
 
                 val destinationFile = File("$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
                 destinationFile.delete()
@@ -53,7 +52,7 @@ fun main() {
     }
 }
 
-fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: String): List<Food> {
+fun getFoodListFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslation: String): List<Food> {
 
     val foodNameBrandMap = csvRecords.mapNotNull(fun(record: CSVRecord): Pair<String, Food>? {
         if (record.size() < columnToIndex!!.size) { // is the line invalid?
@@ -103,7 +102,7 @@ fun getFoodListFromCSVRecords(csvRecords: List<CSVRecord>, portionTranslation: S
     }).toMap()
 
     val uniqueFilteredFoods = foodNameBrandMap.values
-    println("Number of foods overall = ${csvRecords.size}")
+    //println("Number of foods overall = ${csvRecords.size}")
     println(String.format("Number of foods after filtering = %d (%d are unique)", foodNameBrandMap.size, uniqueFilteredFoods.size))
 
     return uniqueFilteredFoods.sortedBy { it.name }

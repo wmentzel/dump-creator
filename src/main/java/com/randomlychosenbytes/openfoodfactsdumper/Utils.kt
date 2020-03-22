@@ -1,10 +1,6 @@
 package com.randomlychosenbytes.openfoodfactsdumper
 
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVParser
-import org.apache.commons.csv.CSVRecord
 import java.io.File
-import java.io.FileReader
 import java.util.regex.Pattern
 import kotlin.system.measureTimeMillis
 
@@ -14,7 +10,7 @@ val countryNameToPortionTranslationMap = mapOf(
         "Australia" to "portion",
         "Belgium" to "deel",
         "Canada" to "portion",
-        //"France" to "portion", // currently too much data for the way this program processes it java.lang.OutOfMemoryError
+        "France" to "portion",
         "Germany" to "Portion",
         "Italy" to "porzione",
         "Netherlands" to "deel",
@@ -82,24 +78,4 @@ fun <T> timeIt(message: String, block: () -> T) {
     println("$message started")
     val seconds = (measureTimeMillis { block() } / 1000.0).toInt()
     println("$message finished (took $seconds s)")
-}
-
-internal fun FileReader.forEachCsvRecord(operation: (CSVRecord) -> Unit) {
-    use { fileReader ->
-        val csvFileFormat = CSVFormat.DEFAULT.withSkipHeaderRecord().withDelimiter('\t')
-        val csvFileParser = CSVParser(fileReader, csvFileFormat)
-
-        val iterator = csvFileParser.iterator()
-
-        while (true) {
-            try {
-                if (iterator.hasNext()) { // even hasNext() throws
-                    operation(iterator.next())
-                } else {
-                    break
-                }
-            } catch (e: Exception) {
-            }
-        }
-    }
 }
