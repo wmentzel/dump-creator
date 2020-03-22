@@ -13,9 +13,11 @@ const val KILOJOULE_TO_KCAL_FACTOR = 0.239006f
 val countryNameToPortionTranslationMap = mapOf(
         "Australia" to "portion",
         "Belgium" to "deel",
+        "Canada" to "portion",
         //"France" to "portion", // currently too much data for the way this program processes it java.lang.OutOfMemoryError
         "Germany" to "Portion",
         "Italy" to "porzione",
+        "Netherlands" to "deel",
         "Spain" to "parte",
         "Switzerland" to "Portion",
         "United Kingdom" to "portion",
