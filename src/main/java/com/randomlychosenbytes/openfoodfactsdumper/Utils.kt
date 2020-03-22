@@ -43,7 +43,7 @@ fun buildUniqueList(
             isNotTheFoodName && isNotEmpty && isLengthOk && isNotOnlyWhiteSpaces && isNotOnIgnoreList
         }.joinToString()
 
-fun writeFoodListToFile(foods: List<Food>, destinationFile: File) {
+fun writeFoodListToFile(foods: Sequence<Food>, destinationFile: File) {
     destinationFile.writer().use { writer ->
         foods.forEach {
             writer.write("${it.toCsvLine()}\n")

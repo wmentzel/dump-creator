@@ -42,7 +42,23 @@ fun main() {
                 val csvFileFormat = CSVFormat.DEFAULT.withSkipHeaderRecord().withDelimiter('\t')
                 val csvFileParser = CSVParser(FileReader("$FILE_IMPORT_PATH/$countryName"), csvFileFormat)
 
-                val foods = getFoodListFromCSVRecords(csvFileParser.asSequence(), countryNameToPortionTranslationMap.getValue(countryName))
+                val iterator = csvFileParser.iterator()
+
+                val skipBrokenLinesIterator = object : Iterator<CSVRecord> {
+                    override fun hasNext(): Boolean {
+                        return try {
+                            iterator.hasNext()
+                        } catch (e: Exception) {
+                            true
+                        }
+                    }
+
+                    override fun next(): CSVRecord {
+                        return iterator.next()
+                    }
+                }
+
+                val foods = getFoodsFromCSVRecords(skipBrokenLinesIterator.asSequence(), countryNameToPortionTranslationMap.getValue(countryName))
 
                 val destinationFile = File("$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
                 destinationFile.delete()
@@ -52,9 +68,9 @@ fun main() {
     }
 }
 
-fun getFoodListFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslation: String): List<Food> {
+fun getFoodsFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslation: String): Sequence<Food> {
 
-    val foodNameBrandMap = csvRecords.mapNotNull(fun(record: CSVRecord): Pair<String, Food>? {
+    val foods = csvRecords.mapNotNull(fun(record: CSVRecord): Food? {
         if (record.size() < columnToIndex!!.size) { // is the line invalid?
             return null
         }
@@ -98,13 +114,16 @@ fun getFoodListFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslatio
             setOf(Portion(portionTranslation, it))
         } ?: setOf()
 
-        return (food.name + food.brands) to food
-    }).toMap()
+        return food
+    })
 
-    val uniqueFilteredFoods = foodNameBrandMap.values
-    //println("Number of foods overall = ${csvRecords.size}")
-    println(String.format("Number of foods after filtering = %d (%d are unique)", foodNameBrandMap.size, uniqueFilteredFoods.size))
+    // Sequence can only be iterated once...
+    //println("Number of foods: " + foods.count())
+    //val filteredFoods = foods.filterNotNull()
+    //println("Number of foods after filtering: " + filteredFoods.count())
+    //val uniqueFilteredFoods = filteredFoods
+    //println("Number of foods after filtering (unique): " + uniqueFilteredFoods.count())
 
-    return uniqueFilteredFoods.sortedBy { it.name }
+    return foods.distinctBy { food -> food.name + food.brands }.sortedBy { it.name }
 }
 
