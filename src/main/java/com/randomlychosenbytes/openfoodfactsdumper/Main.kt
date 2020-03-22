@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
 var columnToIndex: Map<String, Int>? = null
 
 fun main() {
-    val countryFiles = countryNameToPortionTranslationMap.keys.associate { it to File("$FILE_IMPORT_PATH/$it") }
+    val countryFiles = countryNameToPortionTranslationMap.keys.associateWith { File("$FILE_IMPORT_PATH/$it") }
 
     // clear old files
     countryFiles.values.filter { it.exists() }.forEach { it.delete() }
