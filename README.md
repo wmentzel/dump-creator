@@ -1,18 +1,17 @@
 # OpenFoodFactsDumpCreator
 
-The next release of Calories Count, an Android app I have written to track your daily calories, 
-will include subsets of the data provided by openfoodfacts.org
+[Calories Count](https://play.google.com/store/apps/details?id=com.randomlychosenbytes.caloriescount), an Android app to
+track your daily calories, will include subsets of the data provided
+by [Open Food Facts](https://world.openfoodfacts.org/)
 
-The database is, with only ~224 MB (all countries, all columns), so small right now, that it makes sense to download all foods for one country, which enables
-the app to function completely offline once the download is done.
+This program creates country-specific CSV files which only contain the columns needed for Calories Count. Those files
+can then by downloaded by Calories Count, which enables the app to function completely offline once the download is
+done.
 
-A subset will only contain the foods available in the chosen country and will only have the columns that CC utilizes which makes it really small (kB).
+**Columns of CSV file:**
 
-**Column names:**
-foodName|brands|categories|calories_100g|fat_100g|carbs_100g|protein_100g|beverage|portions**
+    foodName|brands|categories|calories_100g|fat_100g|carbs_100g|protein_100g|beverage|portions**
 
-**Example:**<br/>
-Coca Cola|Coca Cola||18|85.2|4.0|0.4|true|{"1 Bottle":500}**
+**Example:**
 
-This little Java programm will create this subset by parsing the complete CSV file provided by openfoodfacts.org, 
-which contains nutritional information from all over the world. The filtered result will be saved as CSV file as well which can be imported in CC.
+    Coca Cola|Coca Cola||18|85.2|4.0|0.4|true|{"1 Bottle":500}**
