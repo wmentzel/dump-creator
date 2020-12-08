@@ -58,7 +58,7 @@ fun main() {
                     }
                 }
 
-                val foods = getFoodsFromCSVRecords(skipBrokenLinesIterator.asSequence(), countryNameToPortionTranslationMap.getValue(countryName))
+                val foods = getFoodsFromCSVRecords(columnToIndex!!, skipBrokenLinesIterator.asSequence(), countryNameToPortionTranslationMap.getValue(countryName))
 
                 val destinationFile = File("$FILE_IMPORT_PATH/db_dump_${countryName.replace(' ', '_').toLowerCase()}.csv")
                 destinationFile.delete()
@@ -68,10 +68,10 @@ fun main() {
     }
 }
 
-fun getFoodsFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslation: String): Sequence<Food> {
+fun getFoodsFromCSVRecords(columnToIndex: Map<String, Int>, csvRecords: Sequence<CSVRecord>, portionTranslation: String): Sequence<Food> {
 
     val foods = csvRecords.mapNotNull(fun(record: CSVRecord): Food? {
-        if (record.size() < columnToIndex!!.size) { // is the line invalid?
+        if (record.size() < columnToIndex.size) { // is the line invalid?
             return null
         }
 
@@ -80,7 +80,7 @@ fun getFoodsFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslation: 
         //
         val food = Food()
 
-        val foodName = record.get(columnToIndex!!.getValue("product_name")).trim().replace("&quot;", "")
+        val foodName = record.get(columnToIndex.getValue("product_name")).trim().replace("&quot;", "")
 
         if (foodName.isEmpty()) {
             return null
@@ -91,26 +91,26 @@ fun getFoodsFromCSVRecords(csvRecords: Sequence<CSVRecord>, portionTranslation: 
         }
 
         food.name = foodName
-        food.brands = buildUniqueList(foodName, record.get(columnToIndex!!.getValue("brands")),
+        food.brands = buildUniqueList(foodName, record.get(columnToIndex.getValue("brands")),
                 CATEGORIES_BLACKLIST, MAX_LENGTH_BRAND_NAME, MAX_NUM_BRANDS)
 
-        val categoriees = buildUniqueList(foodName, record.get(columnToIndex!!.getValue("categories_en")) + "," + record.get(columnToIndex!!.getValue("generic_name")),
+        val categoriees = buildUniqueList(foodName, record.get(columnToIndex.getValue("categories_en")) + "," + record.get(columnToIndex!!.getValue("generic_name")),
                 CATEGORIES_BLACKLIST, MAX_LENGTH_CATEGORY_NAME, MAX_NUM_CATEGORIES)
         food.categories = categoriees
-        food.isBeverage = isBeverage(record.get(columnToIndex!!.getValue("quantity")))
+        food.isBeverage = isBeverage(record.get(columnToIndex.getValue("quantity")))
 
         try {
-            val kiloJoule = record.get(columnToIndex!!.getValue("energy_100g")).toInt()
+            val kiloJoule = record.get(columnToIndex.getValue("energy_100g")).toInt()
             food.calories = (kiloJoule * KILOJOULE_TO_KCAL_FACTOR).roundToInt()
             food.weight = 100.0f
-            food.protein = record.get(columnToIndex!!.getValue("proteins_100g")).toFloat()
-            food.carbohydrate = record.get(columnToIndex!!.getValue("carbohydrates_100g")).toFloat()
-            food.fat = record.get(columnToIndex!!.getValue("fat_100g")).toFloat()
+            food.protein = record.get(columnToIndex.getValue("proteins_100g")).toFloat()
+            food.carbohydrate = record.get(columnToIndex.getValue("carbohydrates_100g")).toFloat()
+            food.fat = record.get(columnToIndex.getValue("fat_100g")).toFloat()
         } catch (e: NumberFormatException) {
             return null
         }
 
-        food.portions = getFirstNumberInString(record.get(columnToIndex!!.getValue("serving_size")))?.let {
+        food.portions = getFirstNumberInString(record.get(columnToIndex.getValue("serving_size")))?.let {
             setOf(Portion(portionTranslation, it))
         } ?: setOf()
 
